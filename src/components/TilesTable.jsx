@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { connect } from "react-redux";
 import { createDeck, shuffleDeck } from "../app/tileDeck";
 import Tile from "./Tile";
+import TileControls from "./TileControls";
 
 const StyledTile = styled(Tile)`
   border: 2px solid #000;
@@ -42,7 +43,7 @@ const Container = styled.div`
   flex-direction: column;
 `;
 
-class TileGame extends Component {
+class TilesTable extends Component {
   state = {
     tilesCount: 16,
     selectedTiles: [],
@@ -73,7 +74,7 @@ class TileGame extends Component {
     this.props.shuffleDeck();
   };
 
-  handleTileCLick = (e, tile) => {
+  handleTileCLick = (tile) => {
     const { selectedTileIds, selectedTiles } = this.state;
 
     // handle same tile click
@@ -90,6 +91,15 @@ class TileGame extends Component {
         }
       );
     }
+  };
+
+  handleChangeTilesTable = (newTilesCount) => {
+    this.setState(
+      {
+        tilesCount: newTilesCount,
+      },
+      () => this.initGame()
+    );
   };
 
   compareTiles = () => {
@@ -123,7 +133,7 @@ class TileGame extends Component {
       return (
         <StyledTile
           key={tile.id}
-          onClick={(e) => this.handleTileCLick(e, tile)}
+          onClick={() => this.handleTileCLick(tile)}
           secret={tile.tile}
           opened={selectedTileIds.includes(tile.id) ? 1 : 0}
           disabled={correctlyGuessed.includes(tile.id)}
@@ -137,6 +147,10 @@ class TileGame extends Component {
       <>
         <Container>
           <TileGrid>{this.renderTable()}</TileGrid>
+          <TileControls
+            currentTiles={this.state.tilesCount}
+            onSubmit={this.handleChangeTilesTable}
+          />
         </Container>
       </>
     );
@@ -152,4 +166,4 @@ const mapDispatchToProps = {
   shuffleDeck,
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(TileGame);
+export default connect(mapStateToProps, mapDispatchToProps)(TilesTable);
