@@ -1,20 +1,30 @@
 import React, { Component } from "react";
-import Tile from "./Tile";
 import styled from "styled-components";
+import { connect } from "react-redux";
+import { createDeck, shuffleDeck } from "../app/tileDeck";
+import Tile from "./Tile";
 
 const StyledTile = styled(Tile)`
   border: 2px solid #000;
   border-radius: 5px;
-  background-color: #7b91ff;
+  background-color: ${(props) => {
+    let color = "#7b91ff";
+
+    if (props.opened) color = "brown";
+    if (props.disabled) color = "blanchedalmond";
+
+    return color;
+  }};
   height: 100px;
   cursor: pointer;
 
-  &:hover {
-    background-color: #7164e8;
-  }
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: ${(props) => (props.opened || props.disabled ? "100px" : "0px")};
 `;
 
-const Grid = styled.div`
+const TileGrid = styled.div`
   width: 50%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -32,47 +42,114 @@ const Container = styled.div`
   flex-direction: column;
 `;
 
-// button from styled components
-const StyledButton = styled.button`
-  padding: 20px;
-  margin-top: 30px;
-  background-color: #6ed2ff;
-  font-size: 1em;
-  border: 2px solid #000;
-  border-radius: 3px;
-
-  &:hover {
-    background-color: #5895e8;
-    cursor: pointer;
-  }
-`;
-
-class TilesTable extends Component {
+class TileGame extends Component {
   state = {
-    tilesCount: 15,
+    tilesCount: 16,
+    selectedTiles: [],
+    selectedTileIds: [],
+    correctlyGuessed: [],
+  };
+
+  componentDidMount() {
+    this.initGame();
+  }
+
+  componentDidUpdate() {
+    if (this.state.correctlyGuessed.length === this.state.tilesCount) {
+      setTimeout(() => {
+        alert("You won the game");
+        this.setState({
+          selectedTileIds: [],
+          selectedTiles: [],
+          correctlyGuessed: [],
+        });
+        this.initGame();
+      }, 400);
+    }
+  }
+
+  initGame = () => {
+    this.props.createDeck(this.state.tilesCount);
+    this.props.shuffleDeck();
+  };
+
+  handleTileCLick = (e, tile) => {
+    const { selectedTileIds, selectedTiles } = this.state;
+
+    // handle same tile click
+    if (selectedTileIds.includes(tile.id)) return;
+
+    if (selectedTileIds.length < 2) {
+      this.setState(
+        {
+          selectedTileIds: [...selectedTileIds, tile.id],
+          selectedTiles: [...selectedTiles, tile.tile],
+        },
+        () => {
+          this.compareTiles();
+        }
+      );
+    }
+  };
+
+  compareTiles = () => {
+    const { selectedTileIds, selectedTiles, correctlyGuessed } = this.state;
+
+    if (selectedTileIds.length !== 2) return;
+
+    if (selectedTiles[0] === selectedTiles[1]) {
+      this.setState({
+        correctlyGuessed: [
+          ...correctlyGuessed,
+          selectedTileIds[0],
+          selectedTileIds[1],
+        ],
+      });
+    }
+
+    setTimeout(() => {
+      this.setState({
+        selectedTileIds: [],
+        selectedTiles: [],
+      });
+    }, 500);
   };
 
   renderTable = () => {
-    const { tilesCount } = this.state;
-    const tilesArray = [];
+    const { deck } = this.props;
+    const { selectedTileIds, correctlyGuessed } = this.state;
 
-    for (let i = 0; i <= tilesCount; i++) {
-      tilesArray.push(<StyledTile key={i} />);
-    }
-
-    return tilesArray;
+    return deck.map((tile) => {
+      return (
+        <StyledTile
+          key={tile.id}
+          onClick={(e) => this.handleTileCLick(e, tile)}
+          secret={tile.tile}
+          opened={selectedTileIds.includes(tile.id) ? 1 : 0}
+          disabled={correctlyGuessed.includes(tile.id)}
+        />
+      );
+    });
   };
 
   render() {
     return (
       <>
         <Container>
-          <Grid>{this.renderTable()}</Grid>
-          <StyledButton>Start the game</StyledButton>
+          <TileGrid>{this.renderTable()}</TileGrid>
         </Container>
       </>
     );
   }
 }
 
-export default TilesTable;
+const mapStateToProps = (state) => ({
+  deck: state.tileDeck,
+});
+
+const mapDispatchToProps = {
+  createDeck,
+  shuffleDeck,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(TileGame);
